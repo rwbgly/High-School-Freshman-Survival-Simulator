@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高一新生生存模擬器</title>
+    <style>
+        /* 全域樣式 */
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Microsoft JhengHei, sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* 遊戲主視窗 */
+        #game-container {
+            width: 100%;
+            max-width: 800px;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+            padding: 30px;
+            margin: 20px;
+        }
+
+        /* 狀態列 */
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .round-badge {
+            background: #3b82f6;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1.1em;
+            box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
+        }
+        
+        /* 屬性面板與進度條 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+        .stat-bar-container {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .stat-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9em;
+            font-weight: bold;
+            color: #475569;
+        }
+        .progress-bg {
+            width: 100%;
+            height: 12px;
+            background: #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 50%;
+            border-radius: 6px;
+            transition: width 0.4s ease, background-color 0.3s ease;
+        }
+        #fill-academic { background-color: #10b981; }
+        #fill-club { background-color: #8b5cf6; }
+        #fill-social { background-color: #f59e0b; }
+        #fill-energy { background-color: #ef4444; }
+
+        /* 故事內文區 */
+        .story-section {
+            min-height: 130px;
+            background: #fff;
+            padding: 5px;
+            margin-bottom: 25px;
+        }
+        .story-title {
+            font-size: 1.4em;
+            color: #1e293b;
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-weight: bold;
+            border-left: 5px solid #3b82f6;
+            padding-left: 12px;
+        }
+        .story-text {
+            font-size: 1.15em;
+            line-height: 1.8;
+            color: #334155;
+            white-space: pre-line;
+        }
+
+        /* 屬性異動飄字提示 */
+        .effect-text {
+            color: #059669;
+            font-size: 1em;
+            font-weight: bold;
+            margin-top: 10px;
+            min-height: 24px;
+        }
+        .effect-text.negative {
+            color: #dc2626;
+        }
+
+        /* 選項按鈕 */
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .option-btn {
+            background: #f8fafc;
+            color: #1e293b;
+            border: 1px solid #cbd5e1;
+            padding: 15px 20px;
+            font-size: 1.05em;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+        .option-btn:hover {
+            background: #f0fdf4;
+            border-color: #22c55e;
+            color: #166534;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.1);
+        }
+        .option-btn:active {
+            transform: translateY(0);
+        }
+
+        /* 結局特殊樣式 */
+        .ending-title {
+            color: #ea580c !important;
+            font-size: 1.7em !important;
+            text-align: center;
+            border-left: none !important;
+            padding-left: 0 !important;
+        }
+        .restart-btn {
+            background: #3b82f6 !important;
+            color: white !important;
+            text-align: center !important;
+            font-weight: bold;
+            border: none !important;
+        }
+        .restart-btn:hover {
+            background: #2563eb !important;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div class="status-header">
+        <h2 style="margin:0; font-size: 1.5em; color: #0f172a;">🏫 高一新生生存模擬器</h2>
+        <div id="round-display" class="round-badge">第 1 / 8 週</div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-bar-container">
+            <div class="stat-info"><span>📚 學業智商</span><span id="text-academic">50/100</span></div>
+            <div class="progress-bg"><div id="fill-academic" class="progress-fill"></div></div>
+        </div>
+        <div class="stat-bar-container">
+            <div class="stat-info"><span>🎸 社團狂熱</span><span id="text-club">50/100</span></div>
+            <div class="progress-bg"><div id="fill-club" class="progress-fill"></div></div>
+        </div>
+        <div class="stat-bar-container">
+            <div class="stat-info"><span>👥 人際關係</span><span id="text-social">50/100</span></div>
+            <div class="progress-bg"><div id="fill-social" class="progress-fill"></div></div>
+        </div>
+        <div class="stat-bar-container">
+            <div class="stat-info"><span>🔋 剩餘體力</span><span id="text-energy">50/100</span></div>
+            <div class="progress-bg"><div id="fill-energy" class="progress-fill"></div></div>
+        </div>
+    </div>
+
+    <div class="story-section">
+        <div id="story-title" class="story-title">載入中...</div>
+        <div id="story-text" class="story-text">正在初始化高中生活劇本...</div>
+        <div id="effect-display" class="effect-text"></div>
+    </div>
+
+    <div id="options-container" class="options-list"></div>
+</div>
+
+<script>
+    // 1. 初始化屬性
+    let player = {
+        academic: 50,
+        club: 50,
+        social: 50,
+        energy: 50,
+        currentRound: 0
+    };
+
+    // 2. 8 回合完整劇本
+    const events = [
+        {
+            title: "【第一週：高一入學與社團聯展】",
+            text: "操場上各個社團都在瘋狂拉人。吉他社學長姐在台上帥氣飆歌，資訊社正發放超精美貼紙，熱舞社在C位大排舞。放學後，你決定怎麼做？",
+            options: [
+                { text: "直接衝去填最帥氣的音樂/舞蹈性社團報名表！", effects: { club: 20, social: 10, energy: -15, academic: -5 }, msg: "社團狂熱上升！但密集的排練讓體力下降了。" },
+                { text: "冷靜拿了資訊社的傳單，回教室繼續把剛發的數學講義寫完。", effects: { academic: 20, club: -10, energy: -5, social: -5 }, msg: "學業大幅提升！但似乎跟熱鬧的氣氛格格不入。" },
+                { text: "跟新認識的鄰座同學一起去福利社買飲料打屁聊天。", effects: { social: 20, energy: 15, academic: -5, club: -5 }, msg: "成功與同學打成一片，人際與體力上升！" }
+            ]
+        },
+        {
+            title: "【第二週：第一次段考的震撼教育】",
+            text: "高中的第一次段考來臨了！聽說題目難度跟國中完全不是同一個層級。這個週末你打算怎麼分配時間？",
+            options: [
+                { text: "開啟『爆肝模式』，待在圖書館從早讀到晚！", effects: { academic: 25, energy: -25, social: -5 }, msg: "這題肯定會考！學業大增，但你快累癱了。" },
+                { text: "不管了！社團迎新晚會就在考後，這週末必須去留校練團練舞！", effects: { club: 25, academic: -20, social: 10, energy: -15 }, msg: "你在舞台上發光發熱！但段考成績看來是要爆了。" },
+                { text: "去補習班跟朋友一起假裝讀書，其實一直在偷偷傳簡訊聊天、吃速食。", effects: { social: 15, energy: 10, academic: 5, club: -5 }, msg: "友情度上升，但讀書效率似乎不太高？" }
+            ]
+        },
+        {
+            title: "【第三週：自主學習計畫的難題】",
+            text: "資訊課/彈性學習時間，老師要求每個人上網繳交一份『自主學習計畫檔案』，這攸關申請大學的學習歷程。你打算做什麼？",
+            options: [
+                { text: "認真研究，用單一 HTML 寫出一款超厲害的網頁遊戲！", effects: { academic: 25, club: -5, energy: -15 }, msg: "資訊老師在背後看著你，露出了滿意的微笑！學業大漲！" },
+                { text: "隨便從網路上複製貼上別人的心得，空出來的時間拿來刷短影音。", effects: { energy: 20, academic: -20, social: 5 }, msg: "好爽，獲得短暫的快樂，體力回復了，但學業亮紅燈。" },
+                { text: "找班上最強的學霸組隊，靠學霸帶飛，順便蹭一波交情。", effects: { social: 25, academic: 10, energy: -10 }, msg: "成功黏上大腿！人際關係暴增。" }
+            ]
+        },
+        {
+            title: "【第四週：班際球賽的大對決】",
+            text: "下週是高一班際籃球/排球賽，全班鬥志高昂，但放學排練體育項目非常消耗體力，你選擇？",
+            options: [
+                { text: "身為先發主力，放學後瘋狂練球，誓言帶全班拿下冠軍！", effects: { social: 20, energy: -25, club: 10 }, msg: "你是班上的英雄！凝聚力大增，但全身酸痛到不行。" },
+                { text: "留在教室當後勤，幫忙訂飲料、畫加油看板、順便偷偷看書。", effects: { academic: 15, social: 15, energy: 5 }, msg: "既顧到了人際關係，又稍微讀到了一點書。" },
+                { text: "直接請假回家睡覺，反正運動什麼的最討厭了。", effects: { energy: 25, social: -15, academic: -5 }, msg: "體力大增！但隔天去學校，同學聊球賽你完全插不上話。" }
+            ]
+        },
+        {
+            title: "【第五週：邁入下學期！高一校外教學】",
+            text: "高一生最期待的遊樂園校外教學（一宿/一日遊）來了！分組名單出爐，這天在遊樂園裡你打算怎麼瘋？",
+            options: [
+                { text: "帶領全組衝刺最刺激的雲霄飛車，狂拍照發 IG 標記所有人！", effects: { social: 25, club: 15, energy: -20 }, msg: "人際動態牆爆棚，社團社交圈也拓寬了！" },
+                { text: "待在紀念品店 and 餐廳，跟暗戀的對象（或死黨）漫步，享受悠閒時光。", effects: { social: 20, energy: 15, academic: -5 }, msg: "青春洋溢！體力消耗少，留下了美好的回憶。" },
+                { text: "在遊覽車上和園區裡都在看補習班講義，因為下週又要段考了。", effects: { academic: 25, social: -15, energy: -10 }, msg: "學霸精神！但你在團體照裡看起來像個石雕。" }
+            ]
+        },
+        {
+            title: "【第六週：高一最糾結——文理選組單】",
+            text: "輔導室發下了『高二選組意願單』。你必須決定未來要走一類（文史法商）還是二三類（理工醫農）。家長和老師意見不一，你很頭痛。",
+            options: [
+                { text: "花大量時間找輔導老師諮詢、做性向測驗，認真規劃未來。", effects: { academic: 20, energy: -15 }, msg: "對未來有了清晰的方向，學業思維提升！" },
+                { text: "不管啦，好朋友選哪一類我就選哪一類，這樣高二才能繼續同班！", effects: { social: 25, academic: -15, energy: 5 }, msg: "友情萬歲！人際關係滿分，但未來課業可能會讀得很痛苦..." },
+                { text: "把單子塞進書包最底層假裝忘記，放學繼續去社團辦公室打混。", effects: { club: 25, academic: -15, social: 5 }, msg: "社團生活太美好了，逃避雖可恥但很有用。" }
+            ]
+        },
+        {
+            title: "【第七週：社團成果發表（成發）死線】",
+            text: "高一即將結束，社團的期末成果發表會就在這週末，學長姐盯得超級兇，要求每個人都要到場幫忙排練與美宣。",
+            options: [
+                { text: "扛下美宣組長/表演主角，熬夜做道具、排練到警衛趕人。", effects: { club: 30, social: 15, energy: -30, academic: -10 }, msg: "成發大成功！你成為社團明日之星，但你累到快升天了。" },
+                { text: "當個稱職的小美工，有交代工作就做，做完準時回家看書。", effects: { club: 15, academic: 15, energy: -5 }, msg: "兼顧社團責任與學業，表現平穩。" },
+                { text: "假裝發燒請假放鳥社團，偷偷待在家裡補眠、打電動。", effects: { energy: 25, club: -25, social: -15 }, msg: "體力大補滿！但社團群組裡你被學長姐和同屆私下黑掉了。" }
+            ]
+        },
+        {
+            title: "【第八週：高一終局！期末生死考】",
+            text: "最後一週！期末考決定你高一科目會不會被當、要不要補考。同時，學習歷程上傳截止日也在這週，你只剩最後一絲體力了！",
+            options: [
+                { text: "吞下三顆 B 群，徹夜不眠把所有科目跟學習歷程全部拚完！", effects: { academic: 30, energy: -35 }, msg: "燃燒生命！學業衝到極限！" },
+                { text: "放寬心，能讀多少是多少，晚上11點準時睡覺保養肝臟。", effects: { energy: 20, academic: 5, social: 5 }, msg: "佛系期末，體力狀況良好，但成績可能會有點驚險。" },
+                { text: "組織班級聯合小抄與猜題互助會，跟大家一起分享讀書筆記。", effects: { social: 25, academic: 15, energy: -10 }, msg: "人際大團結！靠著大家的力量一起過關。" }
+            ]
+        }
+    ];
+
+    // 3. 結局判定
+    function getEnding() {
+        if (player.energy <= 0) {
+            return {
+                title: "💀 結局：【醫院病床上的睡美人】",
+                text: "你在高一期間瘋狂爆肝，完全忽視了身體的警訊。在最後的期末生死關頭，你直接在考場暈倒被送進醫務室。\n導師嘆了口氣幫你申請了緩考。高一最後的記憶，只剩下醫院裡冷冷的點滴和吃不完的維他命。高二請好好照顧身體啊！"
+            };
+        }
+        if (player.academic >= 85 && player.club < 40) {
+            return {
+                title: "🏆 結局：【台大預備軍的孤獨神人學霸】",
+                text: "你的高一生活極度純粹——除了讀書，還是讀書。你的校排名永遠保持在全校前三，自主學習網頁拿了全校特優。\n然而，當翻開畢業紀念冊，你發現自己叫不出社團學長姐的名字。這就是成為強者的代價嗎？"
+            };
+        }
+        if (player.club >= 80 && player.academic >= 45) {
+            return {
+                title: "🎸 結局：【全校IG追蹤破千的社團傳奇】",
+                text: "你是這屆最耀眼的風雲人物！你成功接任了社團大幹部，成發當天台下尖叫聲不斷，外校公關片收不完。\n雖然段考成績總是驚險低空飛過，但你的高中青春絕對是最熱血、最完美的！"
+            };
+        }
+        if (player.social >= 80 && player.academic < 45) {
+            return {
+                title: "🥳 結局：【四海皆兄弟的校園社交天花板】",
+                text: "你的人際關係處理得爐火純青，上至教官校長、下至福利社阿姨和校貓都是你的麻吉。文理選組單大家都跟著你選。\n不過因為太常跟朋友出去聚餐，你期末收到了好幾張「學分預警通知書」...暑假準備回學校瘋狂重修吧！"
+            };
+        }
+        if (player.academic < 40 && player.club < 40) {
+            return {
+                title: "🛌 結局：【過度低調的網咖/床鋪馬鈴薯】",
+                text: "學業不行、社團沒參加、選組單隨便亂勾、校外教學也在睡覺。你高一最大的成就，就是上課睡覺從來沒被老師抓到過。\n老師在目的學期評語寫上：「該生實力深不可測，可惜全用在睡覺與打電動。」"
+            };
+        }
+        return {
+            title: "⚖️ 結局：【知足常樂的六角形平衡高中生】",
+            text: "你在學業、社團與人際之間拿捏得恰到好處。雖然沒有考第一名，但安全過關沒被當；雖然不是社團大老，但也結交到了幾位交心的摯友。\n你過著最標準、也最舒適的高中生活，穩紮穩打地朝高二邁進！"
+        };
+    }
+
+    // 4. 更新 UI 數據與進度條
+    function updateUI(effectMsg = "", isNegative = false) {
+        const keys = ['academic', 'club', 'social', 'energy'];
+        keys.forEach(key => {
+            if (player[key] > 100) player[key] = 100;
+            if (player[key] < 0) player[key] = 0;
+            
+            document.getElementById(`text-${key}`).innerText = `${player[key]}/100`;
+            document.getElementById(`fill-${key}`).style.width = `${player[key]}%`;
+        });
+
+        const effectDiv = document.getElementById("effect-display");
+        effectDiv.innerText = effectMsg;
+        if (isNegative) {
+            effectDiv.classList.add("negative");
+        } else {
+            effectDiv.classList.remove("negative");
+        }
+    }
+
+    // 5. 流程控制
+    function nextTurn() {
+        const optionsContainer = document.getElementById("options-container");
+        optionsContainer.innerHTML = "";
+
+        if (player.energy <= 0) {
+            triggerEnding();
+            return;
+        }
+
+        if (player.currentRound >= events.length) {
+            triggerEnding();
+            return;
+        }
+
+        const currentEvent = events[player.currentRound];
+        document.getElementById("round-display").innerText = `第 ${player.currentRound + 1} / ${events.length} 週`;
+        document.getElementById("story-title").innerText = currentEvent.title;
+        document.getElementById("story-text").innerText = currentEvent.text;
+
+        currentEvent.options.forEach(opt => {
+            const btn = document.createElement("button");
+            btn.className = "option-btn";
+            btn.innerText = opt.text;
+            
+            btn.onclick = function() {
+                for (let key in opt.effects) {
+                    player[key] += opt.effects[key];
+                }
+                let isNeg = (opt.effects.energy && opt.effects.energy <= -20);
+                
+                player.currentRound++;
+                updateUI(opt.msg, isNeg);
+                
+                const allBtns = document.querySelectorAll(".option-btn");
+                allBtns.forEach(b => b.disabled = true);
+                
+                setTimeout(nextTurn, 1000);
+            };
+            optionsContainer.appendChild(btn);
+        });
+    }
+
+    // 6. 結局畫面
+    function triggerEnding() {
+        const ending = getEnding();
+        document.getElementById("round-display").innerText = "✨ 青春結算 ✨";
+        document.getElementById("story-title").className = "story-title ending-title";
+        document.getElementById("story-title").innerText = ending.title;
+        document.getElementById("story-text").innerText = ending.text;
+        document.getElementById("effect-display").innerText = "";
+
+        const optionsContainer = document.getElementById("options-container");
+        optionsContainer.innerHTML = "";
+        const restartBtn = document.createElement("button");
+        restartBtn.className = "option-btn restart-btn";
+        restartBtn.innerText = "🔄 重新轉世，體驗全新高一生活";
+        restartBtn.onclick = function() {
+            player = { academic: 50, club: 50, social: 50, energy: 50, currentRound: 0 };
+            document.getElementById("story-title").className = "story-title";
+            updateUI("新學期開始了，這次你要走什麼路線？", false);
+            nextTurn();
+        };
+        optionsContainer.appendChild(restartBtn);
+    }
+
+    // 網頁讀取完成後直接強制執行
+    updateUI("請點選下方選項，開啟你的高一生活！", false);
+    nextTurn();
+</script>
+
+</body>
+</html>
